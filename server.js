@@ -170,6 +170,9 @@ app.use(passport.session())
 // Static files (for file uploads)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 
+// Static files (for favicon, etc.)
+app.use(express.static(path.join(__dirname, 'public')))
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({
@@ -391,7 +394,14 @@ process.on('uncaughtException', (err) => {
   process.exit(1)
 })
 
-// Start the server
-startServer()
+// Initialize for serverless or start server
+if (process.env.VERCEL) {
+  // In Vercel serverless environment, just initialize without starting server
+  connectDB().catch(console.error)
+  slotService.initialize().catch(console.error)
+} else {
+  // In regular environment, start the server
+  startServer()
+}
 
 export default app
