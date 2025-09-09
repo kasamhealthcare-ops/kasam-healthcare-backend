@@ -1,18 +1,18 @@
 {
   "version": 2,
   "name": "kasam-healthcare-backend",
-  "rewrites": [
+  "builds": [
     {
-      "source": "/(.*)",
-      "destination": "/server.js"
+      "src": "server.js",
+      "use": "@vercel/node"
     }
   ],
-  "functions": {
-    "server.js": {
-      "maxDuration": 30,
-      "memory": 1024
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/server.js"
     }
-  },
+  ],
   "crons": [
     {
       "path": "/api/cron/daily-slot-refresh",
