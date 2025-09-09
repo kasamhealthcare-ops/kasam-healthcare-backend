@@ -272,13 +272,13 @@ export const validateAppointmentCreation = [
         throw new Error('Appointment date cannot be in the past. Please select today or a future date.')
       }
 
-      // Don't allow appointments more than 1 year in advance (IST)
-      const oneYearFromNowIST = getISTDate()
-      oneYearFromNowIST.setFullYear(oneYearFromNowIST.getFullYear() + 1)
-      oneYearFromNowIST.setHours(0, 0, 0, 0)
+      // Restrict appointments to next 7 days only (IST)
+      const maxBookingDateIST = getISTDate()
+      maxBookingDateIST.setDate(maxBookingDateIST.getDate() + 7)
+      maxBookingDateIST.setHours(0, 0, 0, 0)
 
-      if (appointmentDate > oneYearFromNowIST) {
-        throw new Error('Appointment date cannot be more than 1 year in advance')
+      if (appointmentDate > maxBookingDateIST) {
+        throw new Error('Appointments can only be booked for the next 7 days. Please select a date within this range.')
       }
 
       return true

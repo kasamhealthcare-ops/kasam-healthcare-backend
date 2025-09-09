@@ -33,19 +33,30 @@ router.get('/available', async (req, res) => {
       })
     }
 
-    // Parse the date and validate it's not in the past
+    // Parse the date and validate it's not in the past using IST
     const targetDate = new Date(date)
-    const today = new Date()
+    const todayIST = getISTDateReliable()
 
     // Set both dates to start of day for accurate comparison
     targetDate.setHours(0, 0, 0, 0)
-    today.setHours(0, 0, 0, 0)
+    todayIST.setHours(0, 0, 0, 0)
 
     // Prevent fetching slots for past dates
-    if (targetDate < today) {
+    if (targetDate < todayIST) {
       return res.status(400).json({
         success: false,
         message: 'Cannot view slots for past dates. Please select today or a future date.'
+      })
+    }
+
+    // Restrict booking to next 7 days only
+    const maxBookingDate = new Date(todayIST)
+    maxBookingDate.setDate(maxBookingDate.getDate() + 7)
+
+    if (targetDate > maxBookingDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Appointments can only be booked for the next 7 days. Please select a date within this range.'
       })
     }
 
@@ -89,8 +100,11 @@ router.get('/available', async (req, res) => {
 
     let filteredSlots = allSlots
 
-    // If the selected date is today, filter out past time slots
-    if (selectedDate.getTime() === todayISTForComparison.getTime()) {
+    // Check if the selected date is today in IST
+    const targetDateIST = new Date(targetDate)
+    targetDateIST.setHours(0, 0, 0, 0)
+
+    if (targetDateIST.getTime() === todayISTForComparison.getTime()) {
       const currentTimeIST = nowIST.getHours() * 60 + nowIST.getMinutes() // Current IST time in minutes
 
       // Debug logging for timezone issues
