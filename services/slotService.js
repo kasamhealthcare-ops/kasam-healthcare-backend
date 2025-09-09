@@ -1,8 +1,8 @@
 import mongoose from 'mongoose'
-import cron from 'node-cron'
 import User from '../models/User.js'
 import Slot from '../models/Slot.js'
 import Appointment from '../models/Appointment.js'
+import { getISTDateReliable } from '../utils/dateUtils.js'
 
 class SlotService {
   constructor() {
@@ -176,12 +176,13 @@ class SlotService {
       console.log(`🔄 Ensuring slots exist for the next ${daysAhead} days...`)
 
       const doctor = await this.findDoctor()
-      const today = new Date()
+      // Use IST timezone for consistent date handling
+      const todayIST = getISTDateReliable()
       let totalCreated = 0
 
       for (let i = 0; i < daysAhead; i++) {
-        const targetDate = new Date(today)
-        targetDate.setDate(today.getDate() + i)
+        const targetDate = new Date(todayIST)
+        targetDate.setDate(todayIST.getDate() + i)
 
         const created = await this.createSlotsForDate(targetDate, doctor)
         totalCreated += created.length
@@ -203,11 +204,12 @@ class SlotService {
   // Clean up old slots (all past unbooked slots) - more aggressive cleanup
   async cleanupOldSlots() {
     try {
-      const today = new Date()
-      today.setHours(0, 0, 0, 0) // Start of today
+      // Use IST timezone for consistent date handling
+      const todayIST = getISTDateReliable()
+      todayIST.setHours(0, 0, 0, 0) // Start of today in IST
 
       const result = await Slot.deleteMany({
-        date: { $lt: today },
+        date: { $lt: todayIST },
         isBooked: false // Only delete unbooked slots
       })
 
@@ -222,12 +224,13 @@ class SlotService {
   // Clean up past appointments (appointments from previous days)
   async cleanupPastAppointments() {
     try {
-      const today = new Date()
-      today.setHours(0, 0, 0, 0) // Start of today
+      // Use IST timezone for consistent date handling
+      const todayIST = getISTDateReliable()
+      todayIST.setHours(0, 0, 0, 0) // Start of today in IST
 
       // Find appointments from past dates
       const pastAppointments = await Appointment.find({
-        appointmentDate: { $lt: today }
+        appointmentDate: { $lt: todayIST }
       })
 
       if (pastAppointments.length === 0) {
@@ -293,38 +296,14 @@ class SlotService {
     }
   }
 
-  // Start the automated slot management
+  // Note: Automated scheduling is now handled by Vercel Cron Jobs
+  // See vercel.json and /api/cron/* endpoints for the new implementation
   startAutomation() {
-    console.log('🤖 Starting automated 7-day rolling slot management...')
-
-    // Run daily at 12:01 AM to maintain 7-day rolling window
-    cron.schedule('1 0 * * *', () => {
-      console.log('⏰ Running daily 7-day slot refresh...')
-      this.generateDailySlots()
-    }, {
-      timezone: 'Asia/Kolkata'
-    })
-
-    // Run cleanup daily at 1:00 AM (more frequent for 7-day window)
-    cron.schedule('0 1 * * *', () => {
-      console.log('⏰ Running daily slot cleanup...')
-      this.cleanupOldSlots()
-    }, {
-      timezone: 'Asia/Kolkata'
-    })
-
-    // Run appointment cleanup daily at 2:00 AM
-    cron.schedule('0 2 * * *', () => {
-      console.log('⏰ Running daily past appointment cleanup...')
-      this.cleanupPastAppointments()
-    }, {
-      timezone: 'Asia/Kolkata'
-    })
-
-    console.log('✅ Automated 7-day rolling slot management started')
-    console.log('📅 Daily 7-day refresh: 12:01 AM IST')
-    console.log('🗑️  Daily slot cleanup: 1:00 AM IST')
-    console.log('🗑️  Daily appointment cleanup: 2:00 AM IST')
+    console.log('ℹ️  Slot automation is now handled by Vercel Cron Jobs')
+    console.log('📅 Daily 7-day refresh: 12:01 AM IST via /api/cron/daily-slot-refresh')
+    console.log('🗑️  Daily slot cleanup: 1:00 AM IST via /api/cron/slot-cleanup')
+    console.log('🗑️  Daily appointment cleanup: 2:00 AM IST via /api/cron/appointment-cleanup')
+    console.log('✅ Cron jobs configured in vercel.json')
   }
 
   // Generate slots for a specific month and year
@@ -355,11 +334,12 @@ class SlotService {
     try {
       console.log(`🔮 Generating slots for the next ${monthsAhead} months...`)
 
-      const today = new Date()
+      // Use IST timezone for consistent date handling
+      const todayIST = getISTDateReliable()
       let totalCreated = 0
 
       for (let i = 0; i < monthsAhead; i++) {
-        const targetDate = new Date(today.getFullYear(), today.getMonth() + i, 1)
+        const targetDate = new Date(todayIST.getFullYear(), todayIST.getMonth() + i, 1)
         const year = targetDate.getFullYear()
         const month = targetDate.getMonth() + 1 // Convert to 1-indexed
 

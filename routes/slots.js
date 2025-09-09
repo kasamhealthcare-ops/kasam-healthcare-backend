@@ -12,6 +12,7 @@ import {
   validateDateRange
 } from '../middleware/validation.js'
 import slotService from '../services/slotService.js'
+import { getISTDateReliable } from '../utils/dateUtils.js'
 
 const router = express.Router()
 
@@ -78,9 +79,10 @@ router.get('/available', async (req, res) => {
     .sort({ startTime: 1 })
 
     // Filter out past slots if the selected date is today
-    const now = new Date()
-    const todayForComparison = new Date()
-    todayForComparison.setHours(0, 0, 0, 0)
+    // Use IST timezone for proper time comparison
+    const nowIST = getISTDateReliable()
+    const todayISTForComparison = new Date(nowIST)
+    todayISTForComparison.setHours(0, 0, 0, 0)
 
     const selectedDate = new Date(utcDate)
     selectedDate.setHours(0, 0, 0, 0)
@@ -88,16 +90,29 @@ router.get('/available', async (req, res) => {
     let filteredSlots = allSlots
 
     // If the selected date is today, filter out past time slots
-    if (selectedDate.getTime() === todayForComparison.getTime()) {
-      const currentTime = now.getHours() * 60 + now.getMinutes() // Current time in minutes
+    if (selectedDate.getTime() === todayISTForComparison.getTime()) {
+      const currentTimeIST = nowIST.getHours() * 60 + nowIST.getMinutes() // Current IST time in minutes
+
+      // Debug logging for timezone issues
+      console.log(`[TIMEZONE DEBUG] Server UTC: ${new Date().toISOString()}`)
+      console.log(`[TIMEZONE DEBUG] IST Time: ${nowIST.toString()}`)
+      console.log(`[TIMEZONE DEBUG] Current IST minutes: ${currentTimeIST}`)
+      console.log(`[TIMEZONE DEBUG] Selected date is today, filtering ${allSlots.length} slots`)
 
       filteredSlots = allSlots.filter(slot => {
         const [hours, minutes] = slot.startTime.split(':').map(Number)
         const slotTime = hours * 60 + minutes // Slot time in minutes
+        const isAvailable = slotTime > (currentTimeIST + 5)
 
-        // Only show slots that haven't started yet (with a small buffer)
-        return slotTime > currentTime
+        if (!isAvailable) {
+          console.log(`[TIMEZONE DEBUG] Filtering out slot ${slot.startTime} (${slotTime} <= ${currentTimeIST + 5})`)
+        }
+
+        // Only show slots that haven't started yet (with a small buffer of 5 minutes)
+        return isAvailable
       })
+
+      console.log(`[TIMEZONE DEBUG] After filtering: ${filteredSlots.length} slots remaining`)
     }
 
     res.json({
@@ -108,7 +123,7 @@ router.get('/available', async (req, res) => {
         doctorId: doctor,
         totalSlots: allSlots.length,
         availableSlots: filteredSlots.length,
-        filteredPastSlots: selectedDate.getTime() === todayForComparison.getTime() ? allSlots.length - filteredSlots.length : 0
+        filteredPastSlots: selectedDate.getTime() === todayISTForComparison.getTime() ? allSlots.length - filteredSlots.length : 0
       }
     })
   } catch (error) {
@@ -151,22 +166,23 @@ router.get('/all', authenticate, authorize('admin', 'doctor'), async (req, res) 
     // Filter out past time slots for today (admin users only) - same logic as paginated endpoint
     let slots = allSlots
     if (req.user.role === 'admin') {
-      const now = new Date()
-      const todayForComparison = new Date()
-      todayForComparison.setHours(0, 0, 0, 0)
+      // Use IST timezone for proper time comparison
+      const nowIST = getISTDateReliable()
+      const todayISTForComparison = new Date(nowIST)
+      todayISTForComparison.setHours(0, 0, 0, 0)
 
       slots = allSlots.filter(slot => {
         const slotDate = new Date(slot.date)
         slotDate.setHours(0, 0, 0, 0)
 
         // If the slot is for today, check if the time has passed
-        if (slotDate.getTime() === todayForComparison.getTime()) {
-          const currentTime = now.getHours() * 60 + now.getMinutes() // Current time in minutes
+        if (slotDate.getTime() === todayISTForComparison.getTime()) {
+          const currentTimeIST = nowIST.getHours() * 60 + nowIST.getMinutes() // Current IST time in minutes
           const [hours, minutes] = slot.startTime.split(':').map(Number)
           const slotTime = hours * 60 + minutes // Slot time in minutes
 
-          // Only show slots that haven't started yet
-          return slotTime > currentTime
+          // Only show slots that haven't started yet (with a small buffer of 5 minutes)
+          return slotTime > (currentTimeIST + 5)
         }
 
         // For future dates, show all slots
@@ -294,22 +310,23 @@ router.get('/', validateSlotsPagination, validateDateRange, async (req, res) => 
     // Filter out past time slots for today (admin users only)
     let slots = allSlots
     if (req.user.role === 'admin') {
-      const now = new Date()
-      const todayForComparison = new Date()
-      todayForComparison.setHours(0, 0, 0, 0)
+      // Use IST timezone for proper time comparison
+      const nowIST = getISTDateReliable()
+      const todayISTForComparison = new Date(nowIST)
+      todayISTForComparison.setHours(0, 0, 0, 0)
 
       slots = allSlots.filter(slot => {
         const slotDate = new Date(slot.date)
         slotDate.setHours(0, 0, 0, 0)
 
         // If the slot is for today, check if the time has passed
-        if (slotDate.getTime() === todayForComparison.getTime()) {
-          const currentTime = now.getHours() * 60 + now.getMinutes() // Current time in minutes
+        if (slotDate.getTime() === todayISTForComparison.getTime()) {
+          const currentTimeIST = nowIST.getHours() * 60 + nowIST.getMinutes() // Current IST time in minutes
           const [hours, minutes] = slot.startTime.split(':').map(Number)
           const slotTime = hours * 60 + minutes // Slot time in minutes
 
-          // Only show slots that haven't started yet
-          return slotTime > currentTime
+          // Only show slots that haven't started yet (with a small buffer of 5 minutes)
+          return slotTime > (currentTimeIST + 5)
         }
 
         // For future dates, show all slots

@@ -17,6 +17,16 @@ export const getISTDate = (date = new Date()) => {
 }
 
 /**
+ * Get current date/time in IST using proper timezone conversion
+ * This is more reliable for server deployments in different timezones
+ * @param {Date} date - Optional date to convert to IST
+ * @returns {Date} Date object in IST
+ */
+export const getISTDateReliable = (date = new Date()) => {
+  return new Date(date.toLocaleString("en-US", {timeZone: "Asia/Kolkata"}))
+}
+
+/**
  * Parse dd/mm/yyyy format to Date object
  * @param {string} dateString - Date in dd/mm/yyyy format
  * @returns {Date|null} Date object or null if invalid

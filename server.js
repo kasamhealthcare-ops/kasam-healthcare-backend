@@ -18,6 +18,7 @@ import appointmentRoutes from './routes/appointments.js'
 import medicalRecordRoutes from './routes/medicalRecords.js'
 import slotRoutes from './routes/slots.js'
 import reviewRoutes from './routes/reviews.js'
+import cronRoutes from './routes/cron.js'
 
 // Import middleware
 import { authenticate } from './middleware/auth.js'
@@ -192,6 +193,7 @@ app.use('/api/appointments', appointmentRoutes)
 app.use('/api/medical-records', medicalRecordRoutes)
 app.use('/api/slots', slotRoutes)
 app.use('/api/reviews', reviewRoutes)
+app.use('/api/cron', cronRoutes)
 
 // Health check endpoint under /api path (must be after other routes)
 app.get('/api/health', (req, res) => {
@@ -362,7 +364,8 @@ const startServer = async () => {
     // Connect to database
     await connectDB()
 
-    // Initialize slot service (automated slot management)
+    // Initialize slot service (ensure initial slots exist)
+    // Note: Automated scheduling is now handled by Vercel Cron Jobs
     await slotService.initialize()
 
     // Start listening
@@ -398,7 +401,8 @@ process.on('uncaughtException', (err) => {
 if (process.env.VERCEL) {
   // In Vercel serverless environment, just initialize without starting server
   connectDB().catch(console.error)
-  slotService.initialize().catch(console.error)
+  // Note: Slot service initialization is handled by individual function calls
+  // Cron jobs are managed by Vercel Cron Jobs system
 } else {
   // In regular environment, start the server
   startServer()
