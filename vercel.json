@@ -19,10 +19,6 @@
       "schedule": "1 0 * * *"
     },
     {
-      "path": "/api/cron/slot-cleanup",
-      "schedule": "0 1 * * *"
-    },
-    {
       "path": "/api/cron/appointment-cleanup",
       "schedule": "0 2 * * *"
     }
