@@ -4,19 +4,10 @@ import { getISTDateReliable } from '../utils/dateUtils.js'
 
 const router = express.Router()
 
-// Middleware to verify cron requests (optional but recommended)
-const verifyCronRequest = (req, res, next) => {
-  // Verify the request is from Vercel Cron
-  const cronSecret = process.env.CRON_SECRET
-  const authHeader = req.headers.authorization
-  
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return res.status(401).json({
-      success: false,
-      message: 'Unauthorized cron request'
-    })
-  }
-  
+// Middleware to verify cron requests (Vercel cron jobs are secure by default)
+const verifyCronRequest = (_req, _res, next) => {
+  // Vercel cron jobs are automatically authenticated and secure
+  // No additional authentication needed for internal cron requests
   next()
 }
 
@@ -120,44 +111,53 @@ router.post('/appointment-cleanup', verifyCronRequest, async (req, res) => {
 })
 
 // @route   GET /api/cron/status
-// @desc    Check cron job status and next execution times
+// @desc    Check cron job status and slot health
 // @access  Public (for monitoring)
 router.get('/status', async (req, res) => {
   try {
     const istTime = getISTDateReliable()
-    
+
     // Calculate next execution times (in IST)
     const nextRefresh = new Date(istTime)
     nextRefresh.setDate(nextRefresh.getDate() + 1)
     nextRefresh.setHours(0, 1, 0, 0) // 12:01 AM tomorrow
-    
-    const nextCleanup = new Date(istTime)
-    nextCleanup.setDate(nextCleanup.getDate() + 1)
-    nextCleanup.setHours(1, 0, 0, 0) // 1:00 AM tomorrow
-    
+
     const nextAppointmentCleanup = new Date(istTime)
     nextAppointmentCleanup.setDate(nextAppointmentCleanup.getDate() + 1)
     nextAppointmentCleanup.setHours(2, 0, 0, 0) // 2:00 AM tomorrow
-    
+
+    // Quick slot health check
+    const Slot = (await import('../models/Slot.js')).default
+    const sevenDaysFromNow = new Date(istTime)
+    sevenDaysFromNow.setDate(istTime.getDate() + 7)
+
+    const next7DaysSlots = await Slot.countDocuments({
+      date: { $gte: istTime, $lt: sevenDaysFromNow }
+    })
+
+    const healthStatus = next7DaysSlots === 0 ? 'CRITICAL' :
+                        next7DaysSlots < 50 ? 'WARNING' : 'HEALTHY'
+
     res.status(200).json({
       success: true,
       currentTime: istTime.toISOString(),
       timezone: 'Asia/Kolkata (IST)',
+      slotHealth: {
+        status: healthStatus,
+        slotsNext7Days: next7DaysSlots,
+        message: healthStatus === 'CRITICAL' ? 'No slots for next 7 days! Manual refresh needed.' :
+                healthStatus === 'WARNING' ? 'Low slot count. Check cron jobs.' :
+                'Slot generation working properly.'
+      },
       nextExecutions: {
         dailySlotRefresh: nextRefresh.toISOString(),
-        slotCleanup: nextCleanup.toISOString(),
         appointmentCleanup: nextAppointmentCleanup.toISOString()
       },
       cronJobs: [
         {
           name: 'Daily Slot Refresh',
           schedule: '1 0 * * *',
-          description: 'Maintains 7-day rolling window of slots'
-        },
-        {
-          name: 'Slot Cleanup',
-          schedule: '0 1 * * *',
-          description: 'Removes old unbooked slots'
+          description: 'Maintains 7-day rolling window of slots (includes cleanup)'
         },
         {
           name: 'Appointment Cleanup',

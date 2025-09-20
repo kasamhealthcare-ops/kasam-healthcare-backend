@@ -399,10 +399,17 @@ process.on('uncaughtException', (err) => {
 
 // Initialize for serverless or start server
 if (process.env.VERCEL) {
-  // In Vercel serverless environment, just initialize without starting server
-  connectDB().catch(console.error)
-  // Note: Slot service initialization is handled by individual function calls
-  // Cron jobs are managed by Vercel Cron Jobs system
+  // In Vercel serverless environment, initialize database and slot service
+  const initializeVercel = async () => {
+    try {
+      await connectDB()
+      // Initialize slot service for cron jobs to work properly
+      await slotService.initialize()
+    } catch (error) {
+      console.error('❌ Failed to initialize Vercel environment:', error)
+    }
+  }
+  initializeVercel()
 } else {
   // In regular environment, start the server
   startServer()
