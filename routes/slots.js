@@ -49,14 +49,14 @@ router.get('/available', async (req, res) => {
       })
     }
 
-    // Restrict booking to next 7 days only
+    // Restrict booking to next 15 days only
     const maxBookingDate = new Date(todayIST)
-    maxBookingDate.setDate(maxBookingDate.getDate() + 7)
+    maxBookingDate.setDate(maxBookingDate.getDate() + 15)
 
     if (targetDate > maxBookingDate) {
       return res.status(400).json({
         success: false,
-        message: 'Appointments can only be booked for the next 7 days. Please select a date within this range.'
+        message: 'Appointments can only be booked for the next 15 days. Please select a date within this range.'
       })
     }
 

@@ -1,14 +1,14 @@
-# 7-Day Rolling Slot Management System
+# 15-Day Rolling Slot Management System
 
 ## Overview
 
-The healthcare application now uses a **7-day rolling window** for appointment slot management. This system automatically maintains exactly 7 days of future appointment slots at all times, with daily refresh and cleanup operations.
+The healthcare application now uses a **15-day rolling window** for appointment slot management. This system automatically maintains exactly 15 days of future appointment slots at all times, with daily refresh and cleanup operations.
 
 ## Key Features
 
 ### 🔄 Daily Refresh
 - **Schedule**: Every day at 12:01 AM IST
-- **Function**: Ensures slots exist for the next 7 days
+- **Function**: Ensures slots exist for the next 15 days
 - **Behavior**: Creates missing slots, maintains rolling window
 
 ### 🗑️ Daily Cleanup
@@ -16,18 +16,17 @@ The healthcare application now uses a **7-day rolling window** for appointment s
 - **Function**: Removes old unbooked slots (older than 3 days)
 - **Behavior**: Preserves all booked slots regardless of age
 
-### 📅 Slot Distribution
-- **Monday & Thursday**: Ghodasar Clinic
-- **Tuesday & Friday**: Jasodanagar Clinic
-- **Wednesday & Saturday**: Paldi Clinic (Ellis Bridge)
-- **Sunday**: No slots (clinic closed)
+### 📅 Slot Distribution (15-minute intervals)
+- **Monday-Saturday**: Ghodasar Clinic (30 slots/day) + Vastral Clinic (12 slots/day)
+- **Sunday**: Gandhinagar Clinic only (20 slots/day)
+- **Slot Duration**: 15 minutes per slot (doubled capacity from previous 30-minute slots)
 
 ## How It Works
 
 ### Initialization
 When the server starts:
 1. Connects to MongoDB
-2. Ensures slots exist for next 7 days
+2. Ensures slots exist for next 15 days
 3. Starts automated cron jobs
 4. Logs initialization status
 
@@ -35,8 +34,8 @@ When the server starts:
 
 #### 12:01 AM IST - Daily Refresh
 ```javascript
-// Maintains 7-day rolling window
-await slotService.ensureSlotsExist(7)
+// Maintains 15-day rolling window
+await slotService.ensureSlotsExist(15)
 await slotService.cleanupOldSlots()
 ```
 
@@ -54,7 +53,7 @@ await Slot.deleteMany({
 ### ✅ Advantages
 - **Efficient Storage**: Only maintains necessary slots
 - **Automatic Management**: No manual intervention required
-- **Consistent Availability**: Always 7 days of bookable slots
+- **Consistent Availability**: Always 15 days of bookable slots
 - **Clean Database**: Regular cleanup prevents bloat
 - **Preserves History**: Keeps all booked appointments
 
@@ -70,10 +69,10 @@ await Slot.deleteMany({
 
 #### 1. Comprehensive Test
 ```bash
-npm run test-7day-slots
+npm run test-15day-slots
 ```
 - Tests initialization
-- Verifies 7-day window
+- Verifies 15-day window
 - Checks slot distribution
 - Validates cleanup
 
@@ -83,18 +82,18 @@ npm run trigger-daily-refresh
 ```
 - Simulates daily cron job
 - Shows before/after state
-- Validates 7-day maintenance
+- Validates 15-day maintenance
 
 ### Manual Testing
 ```javascript
 // Check current slots
 const slots = await Slot.countDocuments()
 
-// Check 7-day window
+// Check 15-day window
 const futureSlots = await Slot.countDocuments({
   date: {
     $gte: new Date(),
-    $lt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    $lt: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
   }
 })
 ```
@@ -103,17 +102,20 @@ const futureSlots = await Slot.countDocuments({
 
 ### Time Slots by Clinic
 
-#### Ghodasar Clinic (Monday & Thursday)
-- Morning: 9:00 AM - 12:00 PM (30-min slots)
-- Evening: 6:00 PM - 9:00 PM (30-min slots)
+#### Ghodasar Clinic (Monday-Saturday)
+- Morning: 7:00-8:30 AM (6 slots × 15-min)
+- Extended Morning: 9:00 AM-12:00 PM (12 slots × 15-min)
+- Afternoon: 1:00-2:00 PM (4 slots × 15-min)
+- Evening: 8:30-10:30 PM (8 slots × 15-min)
+- **Total: 30 slots per day**
 
-#### Jasodanagar Clinic (Tuesday & Friday)
-- Morning: 9:00 AM - 12:00 PM (30-min slots)
-- Evening: 6:00 PM - 9:00 PM (30-min slots)
+#### Vastral Clinic (Monday-Saturday)
+- Afternoon: 4:00-7:00 PM (12 slots × 15-min)
+- **Total: 12 slots per day**
 
-#### Paldi Clinic (Wednesday & Saturday)
-- Morning: 9:00 AM - 12:00 PM (30-min slots)
-- Evening: 6:00 PM - 9:00 PM (30-min slots)
+#### Gandhinagar Clinic (Sunday only)
+- Afternoon: 12:00-5:00 PM (20 slots × 15-min)
+- **Total: 20 slots per day**
 
 ### Cron Schedule
 ```javascript
@@ -132,14 +134,14 @@ cron.schedule('0 1 * * *', cleanupOldSlots, {
 
 ### Log Messages
 - `🔄 Daily slot refresh started`
-- `✅ Daily 7-day slot refresh completed`
+- `✅ Daily 15-day slot refresh completed`
 - `🗑️ Cleaned up X old unbooked slots`
-- `📅 Maintaining slots for next 7 days`
+- `📅 Maintaining slots for next 15 days`
 
 ### Health Checks
 Monitor these metrics:
 - Total slots in database
-- Slots for next 7 days
+- Slots for next 15 days
 - Old unbooked slots count
 - Clinic distribution balance
 
@@ -160,13 +162,13 @@ Monitor these metrics:
 
 #### Missing Future Slots
 - Run manual refresh: `slotService.generateDailySlots()`
-- Check 7-day generation logic
+- Check 15-day generation logic
 - Verify clinic schedules
 
 ### Manual Recovery
 ```javascript
 // Emergency slot generation
-await slotService.ensureSlotsExist(7)
+await slotService.ensureSlotsExist(15)
 
 // Force cleanup
 await slotService.cleanupOldSlots()
@@ -178,10 +180,10 @@ await slotService.initialize()
 ## Migration Notes
 
 ### Changes from Previous System
-- **Before**: 30-day ahead generation
-- **After**: 7-day rolling window
+- **Before**: 7-day rolling window
+- **After**: 15-day rolling window
 - **Cleanup**: Daily instead of weekly
-- **Storage**: Significantly reduced
+- **Storage**: Moderately increased but still efficient
 
 ### Backward Compatibility
 - All existing booked slots preserved

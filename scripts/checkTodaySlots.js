@@ -61,8 +61,8 @@ const checkTodaySlots = async () => {
     }
 
     // Check next few days
-    console.log(`\n📊 Slots for next 7 days:`)
-    for (let i = 0; i < 7; i++) {
+    console.log(`\n📊 Slots for next 15 days:`)
+    for (let i = 0; i < 15; i++) {
       const checkDate = new Date(today)
       checkDate.setDate(today.getDate() + i)
       

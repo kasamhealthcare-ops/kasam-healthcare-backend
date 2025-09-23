@@ -6,42 +6,42 @@ import Slot from '../models/Slot.js'
 // Load environment variables
 dotenv.config()
 
-const test7DaySlots = async () => {
+const test15DaySlots = async () => {
   try {
     // Connect to database
     await mongoose.connect(process.env.MONGODB_URI)
     console.log('✅ Connected to MongoDB')
 
-    console.log('🧪 Testing 7-Day Rolling Slot Service...\n')
+    console.log('🧪 Testing 15-Day Rolling Slot Service...\n')
 
     // Test 1: Check current slot count
     const currentSlots = await Slot.countDocuments()
     console.log(`📊 Current slots in database: ${currentSlots}`)
 
-    // Test 2: Initialize slot service (should ensure 7 days of slots)
-    console.log('\n🔄 Testing 7-day slot service initialization...')
+    // Test 2: Initialize slot service (should ensure 15 days of slots)
+    console.log('\n🔄 Testing 15-day slot service initialization...')
     await slotService.initialize()
 
     // Test 3: Check slot count after initialization
     const slotsAfterInit = await Slot.countDocuments()
     console.log(`📊 Slots after initialization: ${slotsAfterInit}`)
 
-    // Test 4: Check that we have exactly 7 days of future slots
+    // Test 4: Check that we have exactly 15 days of future slots
     const today = new Date()
-    const sevenDaysFromNow = new Date(today)
-    sevenDaysFromNow.setDate(today.getDate() + 7)
+    const fifteenDaysFromNow = new Date(today)
+    fifteenDaysFromNow.setDate(today.getDate() + 15)
 
     const futureSlots = await Slot.countDocuments({
       date: {
         $gte: today,
-        $lt: sevenDaysFromNow
+        $lt: fifteenDaysFromNow
       }
     })
-    console.log(`📅 Slots for next 7 days: ${futureSlots}`)
+    console.log(`📅 Slots for next 15 days: ${futureSlots}`)
 
-    // Test 5: Check slot distribution by day for next 7 days
-    console.log('\n📈 7-Day Slot Distribution:')
-    for (let i = 0; i < 7; i++) {
+    // Test 5: Check slot distribution by day for next 15 days
+    console.log('\n📈 15-Day Slot Distribution:')
+    for (let i = 0; i < 15; i++) {
       const checkDate = new Date(today)
       checkDate.setDate(today.getDate() + i)
       
@@ -57,19 +57,19 @@ const test7DaySlots = async () => {
       console.log(`   Day ${i + 1} - ${dayName}${isToday} ${checkDate.toDateString()}: ${daySlots} slots`)
     }
 
-    // Test 6: Test daily slot generation (should maintain 7-day window)
-    console.log('\n🔄 Testing daily 7-day slot refresh...')
+    // Test 6: Test daily slot generation (should maintain 15-day window)
+    console.log('\n🔄 Testing daily 15-day slot refresh...')
     await slotService.generateDailySlots()
 
-    // Test 7: Verify no slots exist beyond 7 days (except booked ones)
-    const eightDaysFromNow = new Date(today)
-    eightDaysFromNow.setDate(today.getDate() + 8)
-    
-    const slotsBeyon7Days = await Slot.countDocuments({
-      date: { $gte: eightDaysFromNow },
+    // Test 7: Verify no slots exist beyond 15 days (except booked ones)
+    const sixteenDaysFromNow = new Date(today)
+    sixteenDaysFromNow.setDate(today.getDate() + 16)
+
+    const slotsBeyond15Days = await Slot.countDocuments({
+      date: { $gte: sixteenDaysFromNow },
       isBooked: false
     })
-    console.log(`📊 Unbooked slots beyond 7 days: ${slotsBeyon7Days} (should be 0)`)
+    console.log(`📊 Unbooked slots beyond 15 days: ${slotsBeyond15Days} (should be 0)`)
 
     // Test 8: Check old slots (should be minimal due to cleanup)
     const threeDaysAgo = new Date(today)
@@ -90,13 +90,13 @@ const test7DaySlots = async () => {
     const finalFutureSlots = await Slot.countDocuments({
       date: {
         $gte: today,
-        $lt: sevenDaysFromNow
+        $lt: fifteenDaysFromNow
       }
     })
-    
+
     console.log(`\n📊 Final Results:`)
     console.log(`   Total slots in database: ${finalSlots}`)
-    console.log(`   Slots for next 7 days: ${finalFutureSlots}`)
+    console.log(`   Slots for next 15 days: ${finalFutureSlots}`)
 
     // Test 11: Show clinic distribution for today
     console.log('\n🏥 Today\'s Clinic Distribution:')
@@ -122,9 +122,9 @@ const test7DaySlots = async () => {
       console.log(`   ${clinic._id}: ${clinic.count} total, ${clinic.available} available`)
     })
 
-    console.log('\n✅ 7-Day Rolling Slot Service test completed successfully!')
+    console.log('\n✅ 15-Day Rolling Slot Service test completed successfully!')
     console.log('\n📋 Summary:')
-    console.log('   ✓ Maintains exactly 7 days of future slots')
+    console.log('   ✓ Maintains exactly 15 days of future slots')
     console.log('   ✓ Daily refresh at 12:01 AM IST')
     console.log('   ✓ Daily cleanup at 1:00 AM IST')
     console.log('   ✓ Removes old unbooked slots (>3 days)')
@@ -139,4 +139,4 @@ const test7DaySlots = async () => {
   }
 }
 
-test7DaySlots()
+test15DaySlots()

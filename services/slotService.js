@@ -35,17 +35,27 @@ class SlotService {
     if (dayOfWeek === 0) {
       if (clinicCode === 'gandhinagar') {
         return [
-          // Sunday slots: 12:00 PM to 5:00 PM (12:00-17:00)
-          { start: '12:00', end: '12:30' },
-          { start: '12:30', end: '13:00' },
-          { start: '13:00', end: '13:30' },
-          { start: '13:30', end: '14:00' },
-          { start: '14:00', end: '14:30' },
-          { start: '14:30', end: '15:00' },
-          { start: '15:00', end: '15:30' },
-          { start: '15:30', end: '16:00' },
-          { start: '16:00', end: '16:30' },
-          { start: '16:30', end: '17:00' }
+          // Sunday slots: 12:00 PM to 5:00 PM (12:00-17:00) - 15-minute intervals
+          { start: '12:00', end: '12:15' },
+          { start: '12:15', end: '12:30' },
+          { start: '12:30', end: '12:45' },
+          { start: '12:45', end: '13:00' },
+          { start: '13:00', end: '13:15' },
+          { start: '13:15', end: '13:30' },
+          { start: '13:30', end: '13:45' },
+          { start: '13:45', end: '14:00' },
+          { start: '14:00', end: '14:15' },
+          { start: '14:15', end: '14:30' },
+          { start: '14:30', end: '14:45' },
+          { start: '14:45', end: '15:00' },
+          { start: '15:00', end: '15:15' },
+          { start: '15:15', end: '15:30' },
+          { start: '15:30', end: '15:45' },
+          { start: '15:45', end: '16:00' },
+          { start: '16:00', end: '16:15' },
+          { start: '16:15', end: '16:30' },
+          { start: '16:30', end: '16:45' },
+          { start: '16:45', end: '17:00' }
         ]
       }
       // Other clinics (Ghodasar, Vastral) are closed on Sunday
@@ -55,36 +65,57 @@ class SlotService {
     switch (clinicCode) {
       case 'ghodasar':
         return [
-          // Morning slots: 7:00 AM to 8:30 AM
-          { start: '07:00', end: '07:30' },
-          { start: '07:30', end: '08:00' },
-          { start: '08:00', end: '08:30' },
-          // Extended morning slots: 9:00 AM to 12:00 PM
-          { start: '09:00', end: '09:30' },
-          { start: '09:30', end: '10:00' },
-          { start: '10:00', end: '10:30' },
-          { start: '10:30', end: '11:00' },
-          { start: '11:00', end: '11:30' },
-          { start: '11:30', end: '12:00' },
-          // Afternoon slots: 1:00 PM to 2:00 PM
-          { start: '13:00', end: '13:30' },
-          { start: '13:30', end: '14:00' },
-          // Evening slots: 8:30 PM to 10:30 PM
-          { start: '20:30', end: '21:00' },
-          { start: '21:00', end: '21:30' },
-          { start: '21:30', end: '22:00' },
-          { start: '22:00', end: '22:30' }
+          // Morning slots: 7:00 AM to 8:30 AM - 15-minute intervals
+          { start: '07:00', end: '07:15' },
+          { start: '07:15', end: '07:30' },
+          { start: '07:30', end: '07:45' },
+          { start: '07:45', end: '08:00' },
+          { start: '08:00', end: '08:15' },
+          { start: '08:15', end: '08:30' },
+          // Extended morning slots: 9:00 AM to 12:00 PM - 15-minute intervals
+          { start: '09:00', end: '09:15' },
+          { start: '09:15', end: '09:30' },
+          { start: '09:30', end: '09:45' },
+          { start: '09:45', end: '10:00' },
+          { start: '10:00', end: '10:15' },
+          { start: '10:15', end: '10:30' },
+          { start: '10:30', end: '10:45' },
+          { start: '10:45', end: '11:00' },
+          { start: '11:00', end: '11:15' },
+          { start: '11:15', end: '11:30' },
+          { start: '11:30', end: '11:45' },
+          { start: '11:45', end: '12:00' },
+          // Afternoon slots: 1:00 PM to 2:00 PM - 15-minute intervals
+          { start: '13:00', end: '13:15' },
+          { start: '13:15', end: '13:30' },
+          { start: '13:30', end: '13:45' },
+          { start: '13:45', end: '14:00' },
+          // Evening slots: 8:30 PM to 10:30 PM - 15-minute intervals
+          { start: '20:30', end: '20:45' },
+          { start: '20:45', end: '21:00' },
+          { start: '21:00', end: '21:15' },
+          { start: '21:15', end: '21:30' },
+          { start: '21:30', end: '21:45' },
+          { start: '21:45', end: '22:00' },
+          { start: '22:00', end: '22:15' },
+          { start: '22:15', end: '22:30' }
         ]
 
       case 'vastral':
         return [
-          // Afternoon slots: 4:00 PM to 7:00 PM
-          { start: '16:00', end: '16:30' },
-          { start: '16:30', end: '17:00' },
-          { start: '17:00', end: '17:30' },
-          { start: '17:30', end: '18:00' },
-          { start: '18:00', end: '18:30' },
-          { start: '18:30', end: '19:00' }
+          // Afternoon slots: 4:00 PM to 7:00 PM - 15-minute intervals
+          { start: '16:00', end: '16:15' },
+          { start: '16:15', end: '16:30' },
+          { start: '16:30', end: '16:45' },
+          { start: '16:45', end: '17:00' },
+          { start: '17:00', end: '17:15' },
+          { start: '17:15', end: '17:30' },
+          { start: '17:30', end: '17:45' },
+          { start: '17:45', end: '18:00' },
+          { start: '18:00', end: '18:15' },
+          { start: '18:15', end: '18:30' },
+          { start: '18:30', end: '18:45' },
+          { start: '18:45', end: '19:00' }
         ]
 
       case 'gandhinagar':
@@ -164,8 +195,8 @@ class SlotService {
     return slotsToCreate
   }
 
-  // Ensure slots exist for the next 7 days (weekly refresh)
-  async ensureSlotsExist(daysAhead = 7) {
+  // Ensure slots exist for the next 15 days (bi-weekly refresh)
+  async ensureSlotsExist(daysAhead = 15) {
     try {
       if (this.isRunning) {
         console.log('⏳ Slot generation already running, skipping...')
@@ -276,13 +307,13 @@ class SlotService {
     }
   }
 
-  // Generate slots for the next 7 days (called daily)
+  // Generate slots for the next 15 days (called daily)
   async generateDailySlots() {
     try {
-      console.log('🕐 Daily slot refresh started - maintaining 7-day rolling window...')
+      console.log('🕐 Daily slot refresh started - maintaining 15-day rolling window...')
 
-      // Ensure we always have slots for the next 7 days
-      await this.ensureSlotsExist(7)
+      // Ensure we always have slots for the next 15 days
+      await this.ensureSlotsExist(15)
 
       // Clean up old slots to maintain the rolling window
       await this.cleanupOldSlots()
@@ -290,7 +321,7 @@ class SlotService {
       // Clean up past appointments
       await this.cleanupPastAppointments()
 
-      console.log('✅ Daily 7-day slot refresh completed')
+      console.log('✅ Daily 15-day slot refresh completed')
     } catch (error) {
       console.error('❌ Daily slot refresh failed:', error)
     }
@@ -300,7 +331,7 @@ class SlotService {
   // See vercel.json and /api/cron/* endpoints for the new implementation
   startAutomation() {
     console.log('ℹ️  Slot automation is now handled by Vercel Cron Jobs')
-    console.log('📅 Daily 7-day refresh: 12:01 AM IST via /api/cron/daily-slot-refresh')
+    console.log('📅 Daily 15-day refresh: 12:01 AM IST via /api/cron/daily-slot-refresh')
     console.log('🗑️  Daily slot cleanup: 1:00 AM IST via /api/cron/slot-cleanup')
     console.log('🗑️  Daily appointment cleanup: 2:00 AM IST via /api/cron/appointment-cleanup')
     console.log('✅ Cron jobs configured in vercel.json')
@@ -357,7 +388,7 @@ class SlotService {
 
   // Initialize slots on server startup
   async initialize() {
-    console.log('🚀 Initializing 7-day rolling slot service...')
+    console.log('🚀 Initializing 15-day rolling slot service...')
 
     try {
       // First, clean up old data on server startup
@@ -365,14 +396,14 @@ class SlotService {
       await this.cleanupPastAppointments()
       await this.cleanupOldSlots()
 
-      // Then ensure slots exist for the next 7 days
-      await this.ensureSlotsExist(7)
+      // Then ensure slots exist for the next 15 days
+      await this.ensureSlotsExist(15)
 
-      // Start automation for 7-day rolling window
+      // Start automation for 15-day rolling window
       this.startAutomation()
 
-      console.log('✅ 7-day rolling slot service initialized successfully')
-      console.log('📅 Maintaining slots for next 7 days with daily refresh')
+      console.log('✅ 15-day rolling slot service initialized successfully')
+      console.log('📅 Maintaining slots for next 15 days with daily refresh')
     } catch (error) {
       console.error('❌ Failed to initialize slot service:', error)
     }

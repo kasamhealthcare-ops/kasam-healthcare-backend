@@ -65,32 +65,50 @@ const createDailySlots = async () => {
       let timeSlots = []
       
       if (currentDate.getDay() === 6) {
-        // Saturday - shorter hours
+        // Saturday - shorter hours (15-minute intervals)
         timeSlots = [
-          { start: '09:00', end: '09:30' },
-          { start: '09:30', end: '10:00' },
-          { start: '10:00', end: '10:30' },
-          { start: '10:30', end: '11:00' },
-          { start: '11:00', end: '11:30' },
-          { start: '11:30', end: '12:00' }
+          { start: '09:00', end: '09:15' },
+          { start: '09:15', end: '09:30' },
+          { start: '09:30', end: '09:45' },
+          { start: '09:45', end: '10:00' },
+          { start: '10:00', end: '10:15' },
+          { start: '10:15', end: '10:30' },
+          { start: '10:30', end: '10:45' },
+          { start: '10:45', end: '11:00' },
+          { start: '11:00', end: '11:15' },
+          { start: '11:15', end: '11:30' },
+          { start: '11:30', end: '11:45' },
+          { start: '11:45', end: '12:00' }
         ]
       } else {
-        // Monday to Friday - full schedule
+        // Monday to Friday - full schedule (15-minute intervals)
         timeSlots = [
           // Morning slots: 9:00 AM to 12:00 PM
-          { start: '09:00', end: '09:30' },
-          { start: '09:30', end: '10:00' },
-          { start: '10:00', end: '10:30' },
-          { start: '10:30', end: '11:00' },
-          { start: '11:00', end: '11:30' },
-          { start: '11:30', end: '12:00' },
+          { start: '09:00', end: '09:15' },
+          { start: '09:15', end: '09:30' },
+          { start: '09:30', end: '09:45' },
+          { start: '09:45', end: '10:00' },
+          { start: '10:00', end: '10:15' },
+          { start: '10:15', end: '10:30' },
+          { start: '10:30', end: '10:45' },
+          { start: '10:45', end: '11:00' },
+          { start: '11:00', end: '11:15' },
+          { start: '11:15', end: '11:30' },
+          { start: '11:30', end: '11:45' },
+          { start: '11:45', end: '12:00' },
           // Evening slots: 4:00 PM to 7:00 PM
-          { start: '16:00', end: '16:30' },
-          { start: '16:30', end: '17:00' },
-          { start: '17:00', end: '17:30' },
-          { start: '17:30', end: '18:00' },
-          { start: '18:00', end: '18:30' },
-          { start: '18:30', end: '19:00' }
+          { start: '16:00', end: '16:15' },
+          { start: '16:15', end: '16:30' },
+          { start: '16:30', end: '16:45' },
+          { start: '16:45', end: '17:00' },
+          { start: '17:00', end: '17:15' },
+          { start: '17:15', end: '17:30' },
+          { start: '17:30', end: '17:45' },
+          { start: '17:45', end: '18:00' },
+          { start: '18:00', end: '18:15' },
+          { start: '18:15', end: '18:30' },
+          { start: '18:30', end: '18:45' },
+          { start: '18:45', end: '19:00' }
         ]
       }
 

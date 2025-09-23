@@ -12,7 +12,7 @@ const verifyCronRequest = (_req, _res, next) => {
 }
 
 // @route   POST /api/cron/daily-slot-refresh
-// @desc    Daily 7-day slot refresh (runs at 12:01 AM IST)
+// @desc    Daily 15-day slot refresh (runs at 12:01 AM IST)
 // @access  Cron only
 router.post('/daily-slot-refresh', verifyCronRequest, async (req, res) => {
   try {
@@ -128,15 +128,16 @@ router.get('/status', async (req, res) => {
 
     // Quick slot health check
     const Slot = (await import('../models/Slot.js')).default
-    const sevenDaysFromNow = new Date(istTime)
-    sevenDaysFromNow.setDate(istTime.getDate() + 7)
+    const fifteenDaysFromNow = new Date(istTime)
+    fifteenDaysFromNow.setDate(istTime.getDate() + 15)
 
-    const next7DaysSlots = await Slot.countDocuments({
-      date: { $gte: istTime, $lt: sevenDaysFromNow }
+    const next15DaysSlots = await Slot.countDocuments({
+      date: { $gte: istTime, $lt: fifteenDaysFromNow }
     })
 
-    const healthStatus = next7DaysSlots === 0 ? 'CRITICAL' :
-                        next7DaysSlots < 50 ? 'WARNING' : 'HEALTHY'
+    // Health status based on 15-minute slots (double capacity)
+    const healthStatus = next15DaysSlots === 0 ? 'CRITICAL' :
+                        next15DaysSlots < 200 ? 'WARNING' : 'HEALTHY'
 
     res.status(200).json({
       success: true,
@@ -144,10 +145,10 @@ router.get('/status', async (req, res) => {
       timezone: 'Asia/Kolkata (IST)',
       slotHealth: {
         status: healthStatus,
-        slotsNext7Days: next7DaysSlots,
-        message: healthStatus === 'CRITICAL' ? 'No slots for next 7 days! Manual refresh needed.' :
-                healthStatus === 'WARNING' ? 'Low slot count. Check cron jobs.' :
-                'Slot generation working properly.'
+        slotsNext15Days: next15DaysSlots,
+        message: healthStatus === 'CRITICAL' ? 'No slots for next 15 days! Manual refresh needed.' :
+                healthStatus === 'WARNING' ? 'Low slot count (15-min slots). Check cron jobs.' :
+                'Slot generation working properly (15-min intervals).'
       },
       nextExecutions: {
         dailySlotRefresh: nextRefresh.toISOString(),
@@ -157,7 +158,7 @@ router.get('/status', async (req, res) => {
         {
           name: 'Daily Slot Refresh',
           schedule: '1 0 * * *',
-          description: 'Maintains 7-day rolling window of slots (includes cleanup)'
+          description: 'Maintains 15-day rolling window of 15-minute slots (includes cleanup)'
         },
         {
           name: 'Appointment Cleanup',

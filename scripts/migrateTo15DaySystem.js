@@ -5,45 +5,45 @@ import Slot from '../models/Slot.js'
 // Load environment variables
 dotenv.config()
 
-const migrateTo7DaySystem = async () => {
+const migrateTo15DaySystem = async () => {
   try {
     // Connect to database
     await mongoose.connect(process.env.MONGODB_URI)
     console.log('✅ Connected to MongoDB')
 
-    console.log('🔄 Migrating to 7-Day Rolling Slot System...\n')
+    console.log('🔄 Migrating to 15-Day Rolling Slot System...\n')
 
     // Get current state
     const today = new Date()
-    const sevenDaysFromNow = new Date(today)
-    sevenDaysFromNow.setDate(today.getDate() + 7)
+    const fifteenDaysFromNow = new Date(today)
+    fifteenDaysFromNow.setDate(today.getDate() + 15)
 
     const totalSlots = await Slot.countDocuments()
     const futureSlots = await Slot.countDocuments({
-      date: { $gte: today, $lt: sevenDaysFromNow }
+      date: { $gte: today, $lt: fifteenDaysFromNow }
     })
-    const slotsBeyon7Days = await Slot.countDocuments({
-      date: { $gte: sevenDaysFromNow },
+    const slotsBeyond15Days = await Slot.countDocuments({
+      date: { $gte: fifteenDaysFromNow },
       isBooked: false
     })
-    const bookedSlotsBeyond7Days = await Slot.countDocuments({
-      date: { $gte: sevenDaysFromNow },
+    const bookedSlotsBeyond15Days = await Slot.countDocuments({
+      date: { $gte: fifteenDaysFromNow },
       isBooked: true
     })
 
     console.log('📊 Current State:')
     console.log(`   Total slots: ${totalSlots}`)
-    console.log(`   Next 7 days: ${futureSlots}`)
-    console.log(`   Unbooked slots beyond 7 days: ${slotsBeyon7Days}`)
-    console.log(`   Booked slots beyond 7 days: ${bookedSlotsBeyond7Days}`)
+    console.log(`   Next 15 days: ${futureSlots}`)
+    console.log(`   Unbooked slots beyond 15 days: ${slotsBeyond15Days}`)
+    console.log(`   Booked slots beyond 15 days: ${bookedSlotsBeyond15Days}`)
 
-    // Step 1: Remove all unbooked slots beyond 7 days
-    console.log('\n🗑️  Step 1: Removing unbooked slots beyond 7 days...')
+    // Step 1: Remove all unbooked slots beyond 15 days
+    console.log('\n🗑️  Step 1: Removing unbooked slots beyond 15 days...')
     const deleteResult = await Slot.deleteMany({
-      date: { $gte: sevenDaysFromNow },
+      date: { $gte: fifteenDaysFromNow },
       isBooked: false
     })
-    console.log(`   ✅ Deleted ${deleteResult.deletedCount} unbooked slots beyond 7 days`)
+    console.log(`   ✅ Deleted ${deleteResult.deletedCount} unbooked slots beyond 15 days`)
 
     // Step 2: Remove old unbooked slots (older than 3 days)
     console.log('\n🗑️  Step 2: Removing old unbooked slots (>3 days ago)...')
@@ -56,24 +56,24 @@ const migrateTo7DaySystem = async () => {
     })
     console.log(`   ✅ Deleted ${oldDeleteResult.deletedCount} old unbooked slots`)
 
-    // Step 3: Verify the 7-day window
-    console.log('\n📅 Step 3: Verifying 7-day window...')
+    // Step 3: Verify the 15-day window
+    console.log('\n📅 Step 3: Verifying 15-day window...')
     const remainingTotal = await Slot.countDocuments()
-    const remaining7Days = await Slot.countDocuments({
-      date: { $gte: today, $lt: sevenDaysFromNow }
+    const remaining15Days = await Slot.countDocuments({
+      date: { $gte: today, $lt: fifteenDaysFromNow }
     })
-    const remainingBeyond7Days = await Slot.countDocuments({
-      date: { $gte: sevenDaysFromNow },
+    const remainingBeyond15Days = await Slot.countDocuments({
+      date: { $gte: fifteenDaysFromNow },
       isBooked: false
     })
 
     console.log(`   Total slots after cleanup: ${remainingTotal}`)
-    console.log(`   Slots in 7-day window: ${remaining7Days}`)
-    console.log(`   Unbooked slots beyond 7 days: ${remainingBeyond7Days}`)
+    console.log(`   Slots in 15-day window: ${remaining15Days}`)
+    console.log(`   Unbooked slots beyond 15 days: ${remainingBeyond15Days}`)
 
-    // Step 4: Show detailed 7-day breakdown
-    console.log('\n📈 7-Day Window Breakdown:')
-    for (let i = 0; i < 7; i++) {
+    // Step 4: Show detailed 15-day breakdown
+    console.log('\n📈 15-Day Window Breakdown:')
+    for (let i = 0; i < 15; i++) {
       const checkDate = new Date(today)
       checkDate.setDate(today.getDate() + i)
       
@@ -116,24 +116,24 @@ const migrateTo7DaySystem = async () => {
 
     // Step 6: Final validation
     console.log('\n✅ Migration Validation:')
-    if (remainingBeyond7Days === 0) {
-      console.log('   ✓ No unbooked slots beyond 7 days')
+    if (remainingBeyond15Days === 0) {
+      console.log('   ✓ No unbooked slots beyond 15 days')
     } else {
-      console.log(`   ❌ Still ${remainingBeyond7Days} unbooked slots beyond 7 days`)
+      console.log(`   ❌ Still ${remainingBeyond15Days} unbooked slots beyond 15 days`)
     }
 
-    if (remaining7Days > 0) {
-      console.log('   ✓ Slots exist for 7-day window')
+    if (remaining15Days > 0) {
+      console.log('   ✓ Slots exist for 15-day window')
     } else {
-      console.log('   ❌ No slots in 7-day window')
+      console.log('   ❌ No slots in 15-day window')
     }
 
     console.log(`   ✓ Preserved ${bookedAppointments} booked appointments`)
     console.log(`   ✓ Reduced database size by ${totalSlots - remainingTotal} slots`)
 
-    console.log('\n🎉 Migration to 7-Day Rolling System completed successfully!')
+    console.log('\n🎉 Migration to 15-Day Rolling System completed successfully!')
     console.log('\n📋 Next Steps:')
-    console.log('   1. The system will now maintain exactly 7 days of future slots')
+    console.log('   1. The system will now maintain exactly 15 days of future slots')
     console.log('   2. Daily refresh at 12:01 AM IST will maintain the rolling window')
     console.log('   3. Daily cleanup at 1:00 AM IST will remove old unbooked slots')
     console.log('   4. All booked appointments are preserved regardless of date')
@@ -147,4 +147,4 @@ const migrateTo7DaySystem = async () => {
   }
 }
 
-migrateTo7DaySystem()
+migrateTo15DaySystem()

@@ -12,20 +12,20 @@ const triggerDailyRefresh = async () => {
     await mongoose.connect(process.env.MONGODB_URI)
     console.log('✅ Connected to MongoDB')
 
-    console.log('🔄 Manually triggering daily 7-day slot refresh...\n')
+    console.log('🔄 Manually triggering daily 15-day slot refresh...\n')
 
     // Show current state
     const today = new Date()
-    const sevenDaysFromNow = new Date(today)
-    sevenDaysFromNow.setDate(today.getDate() + 7)
+    const fifteenDaysFromNow = new Date(today)
+    fifteenDaysFromNow.setDate(today.getDate() + 15)
 
     console.log('📊 Before refresh:')
     const beforeTotal = await Slot.countDocuments()
     const beforeFuture = await Slot.countDocuments({
-      date: { $gte: today, $lt: sevenDaysFromNow }
+      date: { $gte: today, $lt: fifteenDaysFromNow }
     })
     console.log(`   Total slots: ${beforeTotal}`)
-    console.log(`   Next 7 days: ${beforeFuture}`)
+    console.log(`   Next 15 days: ${beforeFuture}`)
 
     // Trigger the daily refresh
     console.log('\n⏰ Running daily slot refresh (simulating 12:01 AM cron job)...')
@@ -35,14 +35,14 @@ const triggerDailyRefresh = async () => {
     console.log('\n📊 After refresh:')
     const afterTotal = await Slot.countDocuments()
     const afterFuture = await Slot.countDocuments({
-      date: { $gte: today, $lt: sevenDaysFromNow }
+      date: { $gte: today, $lt: fifteenDaysFromNow }
     })
     console.log(`   Total slots: ${afterTotal}`)
-    console.log(`   Next 7 days: ${afterFuture}`)
+    console.log(`   Next 15 days: ${afterFuture}`)
 
-    // Show detailed breakdown for next 7 days
-    console.log('\n📅 Detailed 7-day breakdown:')
-    for (let i = 0; i < 7; i++) {
+    // Show detailed breakdown for next 15 days
+    console.log('\n📅 Detailed 15-day breakdown:')
+    for (let i = 0; i < 15; i++) {
       const checkDate = new Date(today)
       checkDate.setDate(today.getDate() + i)
       
@@ -67,16 +67,16 @@ const triggerDailyRefresh = async () => {
       console.log(`   ${dayName}${isToday} ${checkDate.toDateString()}: ${daySlots} total, ${availableSlots} available`)
     }
 
-    // Check for any slots beyond 7 days
-    const beyondSevenDays = await Slot.countDocuments({
-      date: { $gte: sevenDaysFromNow },
+    // Check for any slots beyond 15 days
+    const beyondFifteenDays = await Slot.countDocuments({
+      date: { $gte: fifteenDaysFromNow },
       isBooked: false
     })
-    
-    if (beyondSevenDays > 0) {
-      console.log(`\n⚠️  Warning: Found ${beyondSevenDays} unbooked slots beyond 7 days`)
+
+    if (beyondFifteenDays > 0) {
+      console.log(`\n⚠️  Warning: Found ${beyondFifteenDays} unbooked slots beyond 15 days`)
     } else {
-      console.log('\n✅ Perfect! No unbooked slots beyond 7 days')
+      console.log('\n✅ Perfect! No unbooked slots beyond 15 days')
     }
 
     // Check for old slots
@@ -96,7 +96,7 @@ const triggerDailyRefresh = async () => {
 
     console.log('\n🎉 Daily refresh simulation completed!')
     console.log('\n📋 Next scheduled runs:')
-    console.log('   🕐 Daily refresh: 12:01 AM IST (maintains 7-day window)')
+    console.log('   🕐 Daily refresh: 12:01 AM IST (maintains 15-day window)')
     console.log('   🗑️  Daily cleanup: 1:00 AM IST (removes old unbooked slots)')
 
   } catch (error) {

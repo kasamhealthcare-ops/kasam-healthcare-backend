@@ -13,9 +13,10 @@
     "test-connection": "node test-connection.js",
     "migrate-usa": "node scripts/migrateUSAToIndia.js",
     "setup": "node ../setup-production.js",
-    "test-7day-slots": "node scripts/test7DaySlots.js",
+    "test-15day-slots": "node scripts/test15DaySlots.js",
     "trigger-daily-refresh": "node scripts/triggerDailyRefresh.js",
-    "migrate-to-7day": "node scripts/migrateTo7DaySystem.js"
+    "migrate-to-15day": "node scripts/migrateTo15DaySystem.js",
+    "migrate-to-15min-slots": "node scripts/migrateTo15MinuteSlots.js"
   },
   "keywords": [
     "healthcare",

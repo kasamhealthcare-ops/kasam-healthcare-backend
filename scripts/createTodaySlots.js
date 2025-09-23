@@ -71,7 +71,7 @@ const createTodaySlots = async () => {
         date: today,
         startTime: slotData.startTime,
         endTime: slotData.endTime,
-        duration: 30,
+        duration: 15,
         isAvailable: true,
         isBooked: false,
         createdBy: doctor._id

@@ -113,15 +113,16 @@ const finalVerification = async () => {
     console.log('\n📋 FINAL SUMMARY:')
     console.log('=' * 50)
     console.log('✅ Jashodanagar and Paldi clinics REMOVED')
-    console.log('✅ Ghodasar: 15 slots/day (Mon-Sat) - 7:00-8:30 AM, 9:00 AM-12:00 PM, 1:00-2:00 PM, 8:30-10:30 PM')
-    console.log('✅ Vastral: 6 slots/day (Mon-Sat) - 4:00-7:00 PM only')
-    console.log('✅ Gandhinagar: 10 slots/day (Sunday only) - 12:00-5:00 PM')
+    console.log('✅ Ghodasar: 30 slots/day (Mon-Sat) - 7:00-8:30 AM, 9:00 AM-12:00 PM, 1:00-2:00 PM, 8:30-10:30 PM (15-min intervals)')
+    console.log('✅ Vastral: 12 slots/day (Mon-Sat) - 4:00-7:00 PM only (15-min intervals)')
+    console.log('✅ Gandhinagar: 20 slots/day (Sunday only) - 12:00-5:00 PM (15-min intervals)')
     console.log('✅ Sunday: Only Gandhinagar open')
     console.log('✅ Monday-Saturday: Ghodasar + Vastral open')
 
-    console.log('\n🎯 EXACT TIME SLOTS MATCH YOUR REQUIREMENTS:')
-    console.log('   Weekdays: Ghodasar (15 slots) + Vastral (6 slots) = 21 slots/day')
-    console.log('   Sunday: Gandhinagar only (10 slots)')
+    console.log('\n🎯 NEW 15-MINUTE SLOT SYSTEM:')
+    console.log('   Weekdays: Ghodasar (30 slots) + Vastral (12 slots) = 42 slots/day')
+    console.log('   Sunday: Gandhinagar only (20 slots)')
+    console.log('   Slot Duration: 15 minutes (doubled capacity from 30-minute slots)')
 
   } catch (error) {
     console.error('❌ Verification failed:', error)

@@ -32,11 +32,11 @@ const seedSlots = async () => {
     await Slot.deleteMany({})
     console.log('🗑️  Cleared existing slots')
 
-    // Create slots for the next 7 days
+    // Create slots for the next 15 days
     const today = new Date()
     const slots = []
 
-    for (let i = 1; i <= 7; i++) {
+    for (let i = 1; i <= 15; i++) {
       const date = new Date(today)
       date.setDate(today.getDate() + i)
       
@@ -90,7 +90,7 @@ const seedSlots = async () => {
 
     // Insert slots
     await Slot.insertMany(slots)
-    console.log(`✅ Created ${slots.length} time slots for the next 7 days`)
+    console.log(`✅ Created ${slots.length} time slots for the next 15 days`)
 
     // Display summary
     const slotsByDate = {}

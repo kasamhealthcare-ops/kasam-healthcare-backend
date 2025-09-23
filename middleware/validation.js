@@ -272,13 +272,13 @@ export const validateAppointmentCreation = [
         throw new Error('Appointment date cannot be in the past. Please select today or a future date.')
       }
 
-      // Restrict appointments to next 7 days only (IST)
+      // Restrict appointments to next 15 days only (IST)
       const maxBookingDateIST = getISTDate()
-      maxBookingDateIST.setDate(maxBookingDateIST.getDate() + 7)
+      maxBookingDateIST.setDate(maxBookingDateIST.getDate() + 15)
       maxBookingDateIST.setHours(0, 0, 0, 0)
 
       if (appointmentDate > maxBookingDateIST) {
-        throw new Error('Appointments can only be booked for the next 7 days. Please select a date within this range.')
+        throw new Error('Appointments can only be booked for the next 15 days. Please select a date within this range.')
       }
 
       return true

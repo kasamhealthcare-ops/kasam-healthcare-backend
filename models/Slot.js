@@ -22,7 +22,7 @@ const slotSchema = new mongoose.Schema({
   },
   duration: {
     type: Number,
-    default: 30, // minutes
+    default: 15, // minutes
     min: [15, 'Minimum slot duration is 15 minutes'],
     max: [240, 'Maximum slot duration is 4 hours']
   },

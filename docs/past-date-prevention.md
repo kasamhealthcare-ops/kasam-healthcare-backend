@@ -80,7 +80,7 @@ const pastAppointments = await Appointment.find({
 
 The system runs three automated processes daily:
 
-1. **12:01 AM**: Daily slot refresh (maintains 7-day rolling window)
+1. **12:01 AM**: Daily slot refresh (maintains 15-day rolling window)
 2. **1:00 AM**: Old slot cleanup (removes unbooked slots older than 3 days)
 3. **2:00 AM**: Past appointment cleanup (removes past appointments)
 

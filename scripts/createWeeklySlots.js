@@ -8,7 +8,7 @@ dotenv.config()
 
 const createWeeklySlots = async () => {
   try {
-    console.log('📅 Creating slots for the next 7 days with proper clinic assignments...')
+    console.log('📅 Creating slots for the next 15 days with proper clinic assignments...')
     
     // Connect to MongoDB
     await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/kasam-healthcare')
@@ -88,10 +88,10 @@ const createWeeklySlots = async () => {
     const slotsToCreate = []
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
-    console.log('\n📅 Planning slots for the next 7 days:')
+    console.log('\n📅 Planning slots for the next 15 days:')
 
-    // Create slots for the next 7 days at ALL clinic locations
-    for (let i = 0; i < 7; i++) {
+    // Create slots for the next 15 days at ALL clinic locations
+    for (let i = 0; i < 15; i++) {
       const targetDate = new Date(today)
       targetDate.setDate(today.getDate() + i)
       targetDate.setHours(0, 0, 0, 0)
@@ -130,7 +130,7 @@ const createWeeklySlots = async () => {
     // Insert all slots
     if (slotsToCreate.length > 0) {
       await Slot.insertMany(slotsToCreate)
-      console.log(`\n✅ Created ${slotsToCreate.length} slots for the next 7 days`)
+      console.log(`\n✅ Created ${slotsToCreate.length} slots for the next 15 days`)
 
       // Show distribution by clinic
       const clinicCounts = {}
