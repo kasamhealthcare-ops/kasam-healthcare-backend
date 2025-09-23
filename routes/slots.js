@@ -204,20 +204,16 @@ router.get('/all', authenticate, authorize('admin', 'doctor'), async (req, res) 
       })
     }
 
-    // Calculate statistics - match paginated endpoint logic
-    // Total count should be from database query (before time filtering)
-    const totalSlots = await Slot.countDocuments(query)
-
-    // Available count should also be from database query (before time filtering)
-    const availableQuery = { ...query, isBooked: false, isAvailable: true }
-    const availableSlots = await Slot.countDocuments(availableQuery)
+    // Calculate statistics from the time-filtered slots array to ensure consistency
+    const totalSlots = slots.length
+    const availableSlots = slots.filter(slot => !slot.isBooked && slot.isAvailable).length
 
     res.json({
       success: true,
       data: {
         slots, // This is the time-filtered slots for display
-        totalSlots, // This is the total from DB (matches paginated endpoint)
-        availableSlots // This is available count from DB (matches paginated endpoint)
+        totalSlots, // This matches the actual slots array length
+        availableSlots // This matches the available slots in the filtered array
       }
     })
   } catch (error) {
