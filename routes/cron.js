@@ -1,23 +1,24 @@
 import express from 'express'
 import slotService from '../services/slotService.js'
-import { getISTDateReliable } from '../utils/dateUtils.js'
+import { getISTCalendarDay, SLOT_WINDOW_DAYS } from '../utils/dateUtils.js'
 
 const router = express.Router()
 
-// Middleware to verify cron requests (Vercel cron jobs are secure by default)
-const verifyCronRequest = (_req, _res, next) => {
-  // Vercel cron jobs are automatically authenticated and secure
-  // No additional authentication needed for internal cron requests
-  next()
+const nextExecution = (now, hour, minute) => {
+  const next = new Date(now)
+  next.setUTCHours(hour, minute, 0, 0)
+  if (next <= now) next.setUTCDate(next.getUTCDate() + 1)
+  return next.toISOString()
 }
 
-// @route   POST /api/cron/daily-slot-refresh
-// @desc    Daily 15-day slot refresh (runs at 12:01 AM IST)
-// @access  Cron only
-router.post('/daily-slot-refresh', verifyCronRequest, async (req, res) => {
+// @route   GET/POST /api/cron/daily-slot-refresh
+// @desc    Daily 30-day slot refresh (runs at 12:01 AM IST)
+// @access  Public
+router.route('/daily-slot-refresh').get(dailySlotRefresh).post(dailySlotRefresh)
+async function dailySlotRefresh(req, res) {
   try {
     const startTime = Date.now()
-    const istTime = getISTDateReliable()
+    const istTime = new Date()
     
     console.log(`⏰ [CRON] Daily slot refresh started at ${istTime.toISOString()}`)
     
@@ -39,18 +40,19 @@ router.post('/daily-slot-refresh', verifyCronRequest, async (req, res) => {
       success: false,
       message: 'Daily slot refresh failed',
       error: error.message,
-      executedAt: getISTDateReliable().toISOString()
+      executedAt: new Date().toISOString()
     })
   }
-})
+}
 
-// @route   POST /api/cron/slot-cleanup
+// @route   GET/POST /api/cron/slot-cleanup
 // @desc    Daily slot cleanup (runs at 1:00 AM IST)
-// @access  Cron only
-router.post('/slot-cleanup', verifyCronRequest, async (req, res) => {
+// @access  Public
+router.route('/slot-cleanup').get(slotCleanup).post(slotCleanup)
+async function slotCleanup(req, res) {
   try {
     const startTime = Date.now()
-    const istTime = getISTDateReliable()
+    const istTime = new Date()
     
     console.log(`⏰ [CRON] Slot cleanup started at ${istTime.toISOString()}`)
     
@@ -72,23 +74,24 @@ router.post('/slot-cleanup', verifyCronRequest, async (req, res) => {
       success: false,
       message: 'Slot cleanup failed',
       error: error.message,
-      executedAt: getISTDateReliable().toISOString()
+      executedAt: new Date().toISOString()
     })
   }
-})
+}
 
-// @route   POST /api/cron/appointment-cleanup
+// @route   GET/POST /api/cron/appointment-cleanup
 // @desc    Daily appointment cleanup (runs at 2:00 AM IST)
-// @access  Cron only
-router.post('/appointment-cleanup', verifyCronRequest, async (req, res) => {
+// @access  Public
+router.route('/appointment-cleanup').get(appointmentCleanup).post(appointmentCleanup)
+async function appointmentCleanup(req, res) {
   try {
     const startTime = Date.now()
-    const istTime = getISTDateReliable()
+    const istTime = new Date()
     
     console.log(`⏰ [CRON] Appointment cleanup started at ${istTime.toISOString()}`)
     
     // Run the appointment cleanup
-    await slotService.cleanupPastAppointments()
+    await slotService.cleanupOldSlots()
     
     const duration = Date.now() - startTime
     console.log(`✅ [CRON] Appointment cleanup completed in ${duration}ms`)
@@ -105,39 +108,40 @@ router.post('/appointment-cleanup', verifyCronRequest, async (req, res) => {
       success: false,
       message: 'Appointment cleanup failed',
       error: error.message,
-      executedAt: getISTDateReliable().toISOString()
+      executedAt: new Date().toISOString()
     })
   }
-})
+}
 
 // @route   GET /api/cron/status
 // @desc    Check cron job status and slot health
 // @access  Public (for monitoring)
 router.get('/status', async (req, res) => {
   try {
-    const istTime = getISTDateReliable()
-
-    // Calculate next execution times (in IST)
-    const nextRefresh = new Date(istTime)
-    nextRefresh.setDate(nextRefresh.getDate() + 1)
-    nextRefresh.setHours(0, 1, 0, 0) // 12:01 AM tomorrow
-
-    const nextAppointmentCleanup = new Date(istTime)
-    nextAppointmentCleanup.setDate(nextAppointmentCleanup.getDate() + 1)
-    nextAppointmentCleanup.setHours(2, 0, 0, 0) // 2:00 AM tomorrow
+    const istTime = new Date()
+    const today = getISTCalendarDay(istTime)
 
     // Quick slot health check
     const Slot = (await import('../models/Slot.js')).default
-    const fifteenDaysFromNow = new Date(istTime)
-    fifteenDaysFromNow.setDate(istTime.getDate() + 15)
+    const windowEnd = new Date(today)
+    windowEnd.setUTCDate(today.getUTCDate() + SLOT_WINDOW_DAYS)
 
-    const next15DaysSlots = await Slot.countDocuments({
-      date: { $gte: istTime, $lt: fifteenDaysFromNow }
-    })
+    const days = await Slot.aggregate([
+      { $match: { date: { $gte: today, $lt: windowEnd } } },
+      { $group: { _id: '$date', count: { $sum: 1 } } }
+    ])
+    const slotCount = days.reduce((total, day) => total + day.count, 0)
+    const missingDates = []
+    for (let i = 0; i < SLOT_WINDOW_DAYS; i++) {
+      const date = new Date(today)
+      date.setUTCDate(today.getUTCDate() + i)
+      if (!days.some(day => day._id.getTime() === date.getTime())) {
+        missingDates.push(date.toISOString().slice(0, 10))
+      }
+    }
 
-    // Health status based on 15-minute slots (double capacity)
-    const healthStatus = next15DaysSlots === 0 ? 'CRITICAL' :
-                        next15DaysSlots < 200 ? 'WARNING' : 'HEALTHY'
+    const healthStatus = slotCount === 0 ? 'CRITICAL' :
+                        missingDates.length > 0 ? 'WARNING' : 'HEALTHY'
 
     res.status(200).json({
       success: true,
@@ -145,24 +149,32 @@ router.get('/status', async (req, res) => {
       timezone: 'Asia/Kolkata (IST)',
       slotHealth: {
         status: healthStatus,
-        slotsNext15Days: next15DaysSlots,
-        message: healthStatus === 'CRITICAL' ? 'No slots for next 15 days! Manual refresh needed.' :
-                healthStatus === 'WARNING' ? 'Low slot count (15-min slots). Check cron jobs.' :
-                'Slot generation working properly (15-min intervals).'
+        windowDays: SLOT_WINDOW_DAYS,
+        slotsNext30Days: slotCount,
+        missingDates,
+        message: healthStatus === 'CRITICAL' ? 'No slots for next 30 days! Manual refresh needed.' :
+                healthStatus === 'WARNING' ? 'Missing dates in the 30-day window. Check cron jobs.' :
+                'Slots exist for all 30 days. This does not verify cron execution.'
       },
       nextExecutions: {
-        dailySlotRefresh: nextRefresh.toISOString(),
-        appointmentCleanup: nextAppointmentCleanup.toISOString()
+        dailySlotRefresh: nextExecution(istTime, 18, 31),
+        slotCleanup: nextExecution(istTime, 19, 30),
+        appointmentCleanup: nextExecution(istTime, 20, 30)
       },
       cronJobs: [
         {
           name: 'Daily Slot Refresh',
-          schedule: '1 0 * * *',
-          description: 'Maintains 15-day rolling window of 15-minute slots (includes cleanup)'
+          schedule: '31 18 * * *',
+          description: 'Maintains 30-day rolling window of 15-minute slots (includes cleanup)'
+        },
+        {
+          name: 'Slot Cleanup',
+          schedule: '30 19 * * *',
+          description: 'Removes previous IST days appointments and slots'
         },
         {
           name: 'Appointment Cleanup',
-          schedule: '0 2 * * *',
+          schedule: '30 20 * * *',
           description: 'Removes past appointments and frees slots'
         }
       ]

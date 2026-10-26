@@ -5,6 +5,13 @@
 
 // IST timezone offset (UTC+5:30)
 const IST_OFFSET = 5.5 * 60 * 60 * 1000
+export const SLOT_WINDOW_DAYS = 30
+
+// Slot dates represent IST calendar days as midnight UTC, not midnight instants in IST.
+export const getISTCalendarDay = (date = new Date()) => {
+  const shifted = new Date(date.getTime() + IST_OFFSET)
+  return new Date(Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate()))
+}
 
 /**
  * Get current date/time in IST

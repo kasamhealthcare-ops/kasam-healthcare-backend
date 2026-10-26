@@ -1,20 +1,20 @@
-# 15-Day Rolling Slot Management System
+# 30-Day Rolling Slot Management System
 
 ## Overview
 
-The healthcare application now uses a **15-day rolling window** for appointment slot management. This system automatically maintains exactly 15 days of future appointment slots at all times, with daily refresh and cleanup operations.
+The healthcare application uses a **30-day rolling window**, including today and the next 29 IST calendar days. Daily refresh creates missing slots without resetting existing bookings. The document filename is retained for existing links.
 
 ## Key Features
 
 ### 🔄 Daily Refresh
 - **Schedule**: Every day at 12:01 AM IST
-- **Function**: Ensures slots exist for the next 15 days
+- **Function**: Ensures slots exist for all 30 calendar days
 - **Behavior**: Creates missing slots, maintains rolling window
 
 ### 🗑️ Daily Cleanup
 - **Schedule**: Every day at 1:00 AM IST
-- **Function**: Removes old unbooked slots (older than 3 days)
-- **Behavior**: Preserves all booked slots regardless of age
+- **Function**: Removes slots and appointments from previous IST calendar days
+- **Behavior**: Removes past appointments before slots, including booked slots. Today's and future bookings are preserved. Past appointment history is permanently deleted.
 
 ### 📅 Slot Distribution (15-minute intervals)
 - **Monday-Saturday**: Ghodasar Clinic (30 slots/day) + Vastral Clinic (12 slots/day)
@@ -24,28 +24,28 @@ The healthcare application now uses a **15-day rolling window** for appointment 
 ## How It Works
 
 ### Initialization
-When the server starts:
+When the local server starts:
 1. Connects to MongoDB
-2. Ensures slots exist for next 15 days
-3. Starts automated cron jobs
+2. Ensures slots exist for the 30-day window
+3. Logs the Vercel cron schedules (local startup does not start a scheduler)
 4. Logs initialization status
+
+On Vercel, requests await the database connection. Cold starts do not run cleanup
+or slot generation; only scheduled jobs perform these operations.
 
 ### Daily Operations
 
 #### 12:01 AM IST - Daily Refresh
 ```javascript
-// Maintains 15-day rolling window
-await slotService.ensureSlotsExist(15)
+// Uses the configured 30-day default.
+await slotService.ensureSlotsExist()
 await slotService.cleanupOldSlots()
 ```
 
 #### 1:00 AM IST - Cleanup
 ```javascript
-// Removes unbooked slots older than 3 days
-await Slot.deleteMany({
-  date: { $lt: cutoffDate },
-  isBooked: false
-})
+// Removes previous-day appointments first, then all previous-day slots.
+await slotService.cleanupOldSlots()
 ```
 
 ## Benefits
@@ -53,9 +53,9 @@ await Slot.deleteMany({
 ### ✅ Advantages
 - **Efficient Storage**: Only maintains necessary slots
 - **Automatic Management**: No manual intervention required
-- **Consistent Availability**: Always 15 days of bookable slots
+- **Consistent Availability**: 30 calendar days of bookable slots, including today
 - **Clean Database**: Regular cleanup prevents bloat
-- **Preserves History**: Keeps all booked appointments
+- **Retention Policy**: Past appointments are permanently deleted along with past slots
 
 ### 📊 Performance
 - Reduced database size
@@ -65,14 +65,21 @@ await Slot.deleteMany({
 
 ## Testing
 
-### Test Scripts Available
+Existing manual scripts below connect to a database and can
+create or delete data; do not run them against production just to validate a deployment.
+
+### Legacy Scripts
+
+Scripts named `test15DaySlots` and `migrateTo15DaySystem` are legacy 15-day
+tools, not validation or migration tools for the current window. Do not run
+the old migration against production: it can remove slots beyond 15 days.
 
 #### 1. Comprehensive Test
 ```bash
 npm run test-15day-slots
 ```
 - Tests initialization
-- Verifies 15-day window
+- Verifies the legacy 15-day window, not the current 30-day configuration
 - Checks slot distribution
 - Validates cleanup
 
@@ -82,18 +89,21 @@ npm run trigger-daily-refresh
 ```
 - Simulates daily cron job
 - Shows before/after state
-- Validates 15-day maintenance
+- Generates and reports the configured 30-day window
 
 ### Manual Testing
 ```javascript
 // Check current slots
 const slots = await Slot.countDocuments()
 
-// Check 15-day window
+// Check the 30-day window (date fields encode IST calendar days as UTC midnight)
+const today = getISTCalendarDay()
+const end = new Date(today)
+end.setUTCDate(end.getUTCDate() + SLOT_WINDOW_DAYS)
 const futureSlots = await Slot.countDocuments({
   date: {
-    $gte: new Date(),
-    $lt: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
+    $gte: today,
+    $lt: end
   }
 })
 ```
@@ -118,30 +128,43 @@ const futureSlots = await Slot.countDocuments({
 - **Total: 20 slots per day**
 
 ### Cron Schedule
-```javascript
-// Daily refresh at 12:01 AM IST
-cron.schedule('1 0 * * *', generateDailySlots, {
-  timezone: 'Asia/Kolkata'
-})
+Vercel uses UTC schedules and sends GET requests:
 
-// Daily cleanup at 1:00 AM IST
-cron.schedule('0 1 * * *', cleanupOldSlots, {
-  timezone: 'Asia/Kolkata'
-})
-```
+The daily schedule stays unchanged when increasing the window: the refresh
+handler now ensures 30 days. Deploy both backend and frontend so generation,
+booking validation, and the date picker agree on the final bookable date.
+
+| Endpoint | UTC expression | IST time |
+| --- | --- | --- |
+| `/api/cron/daily-slot-refresh` | `31 18 * * *` | 12:01 AM |
+| `/api/cron/slot-cleanup` | `30 19 * * *` | 1:00 AM |
+| `/api/cron/appointment-cleanup` | `30 20 * * *` | 2:00 AM |
+
+Both cleanup endpoints remove previous-day appointments before deleting slots.
+POST remains supported for existing manual integrations.
+
+Cron endpoints do not require authentication or `CRON_SECRET`. Anyone who knows
+the URLs can invoke generation or permanently delete previous-day appointments
+and slots. These endpoints are public, not restricted to Vercel.
+
+Redeploy the backend after changing the schedules or handlers. Inspect the backend
+project's Cron Jobs and runtime logs for each endpoint. Service failures return
+500 rather than success. `/api/cron/status` reports slot counts and expected
+schedule times, not proof that a cron invocation succeeded. On Hobby plans,
+execution timing can vary within the scheduled hour.
 
 ## Monitoring
 
 ### Log Messages
 - `🔄 Daily slot refresh started`
-- `✅ Daily 15-day slot refresh completed`
-- `🗑️ Cleaned up X old unbooked slots`
-- `📅 Maintaining slots for next 15 days`
+- `✅ Daily 30-day slot refresh completed`
+- `🗑️ Cleaned up X past slots`
+- `📅 Maintaining slots for next 30 days`
 
 ### Health Checks
 Monitor these metrics:
 - Total slots in database
-- Slots for next 15 days
+- Slots for next 30 days and missing dates from `/api/cron/status`
 - Old unbooked slots count
 - Clinic distribution balance
 
@@ -162,13 +185,13 @@ Monitor these metrics:
 
 #### Missing Future Slots
 - Run manual refresh: `slotService.generateDailySlots()`
-- Check 15-day generation logic
+- Check 30-day generation logic
 - Verify clinic schedules
 
 ### Manual Recovery
 ```javascript
 // Emergency slot generation
-await slotService.ensureSlotsExist(15)
+await slotService.ensureSlotsExist()
 
 // Force cleanup
 await slotService.cleanupOldSlots()
@@ -180,13 +203,13 @@ await slotService.initialize()
 ## Migration Notes
 
 ### Changes from Previous System
-- **Before**: 7-day rolling window
-- **After**: 15-day rolling window
+- **Before**: 15-day rolling window
+- **After**: 30-day rolling window (today plus 29 days)
 - **Cleanup**: Daily instead of weekly
 - **Storage**: Moderately increased but still efficient
 
 ### Backward Compatibility
-- All existing booked slots preserved
+- Today's and future booked slots preserved; previous-day appointments and slots are removed
 - API endpoints unchanged
 - Frontend compatibility maintained
 - Database schema unchanged

@@ -2,7 +2,7 @@ import mongoose from 'mongoose'
 import User from '../models/User.js'
 import Slot from '../models/Slot.js'
 import Appointment from '../models/Appointment.js'
-import { getISTDateReliable } from '../utils/dateUtils.js'
+import { getISTCalendarDay, getISTDateReliable, SLOT_WINDOW_DAYS } from '../utils/dateUtils.js'
 
 class SlotService {
   constructor() {
@@ -157,21 +157,17 @@ class SlotService {
 
     const allClinics = this.getAllClinics()
     const slotsToCreate = []
+    const existingSlots = await Slot.find({ doctor: doctor._id, date: targetDate })
+      .select('startTime location')
+      .lean()
+    const existingKeys = new Set(existingSlots.map(slot => `${slot.location}:${slot.startTime}`))
 
     // Create slots for each clinic location with their specific time slots
     for (const clinic of allClinics) {
       const timeSlots = this.getTimeSlotsForClinic(clinic.code, dayOfWeek)
 
       for (const timeSlot of timeSlots) {
-        // Check if slot already exists for this clinic and time
-        const existingSlot = await Slot.findOne({
-          doctor: doctor._id,
-          date: targetDate,
-          startTime: timeSlot.start,
-          location: clinic.code
-        })
-
-        if (!existingSlot) {
+        if (!existingKeys.has(`${clinic.code}:${timeSlot.start}`)) {
           slotsToCreate.push({
             doctor: doctor._id,
             date: targetDate,
@@ -195,27 +191,26 @@ class SlotService {
     return slotsToCreate
   }
 
-  // Ensure slots exist for the next 15 days (bi-weekly refresh)
-  async ensureSlotsExist(daysAhead = 15) {
-    try {
-      if (this.isRunning) {
-        console.log('⏳ Slot generation already running, skipping...')
-        return
-      }
+  async ensureSlotsExist(daysAhead = SLOT_WINDOW_DAYS) {
+    if (this.isRunning) {
+      throw new Error('Slot generation already running')
+    }
 
+    try {
       this.isRunning = true
       console.log(`🔄 Ensuring slots exist for the next ${daysAhead} days...`)
 
       const doctor = await this.findDoctor()
       // Use IST timezone for consistent date handling
-      const todayIST = getISTDateReliable()
+      const todayIST = getISTCalendarDay()
       let totalCreated = 0
 
       for (let i = 0; i < daysAhead; i++) {
         const targetDate = new Date(todayIST)
-        targetDate.setDate(todayIST.getDate() + i)
+        targetDate.setUTCDate(todayIST.getUTCDate() + i)
 
-        const created = await this.createSlotsForDate(targetDate, doctor)
+        const calendarDate = new Date(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), targetDate.getUTCDate())
+        const created = await this.createSlotsForDate(calendarDate, doctor)
         totalCreated += created.length
       }
 
@@ -227,37 +222,34 @@ class SlotService {
 
     } catch (error) {
       console.error('❌ Error ensuring slots exist:', error)
+      throw error
     } finally {
       this.isRunning = false
     }
   }
 
-  // Clean up old slots (all past unbooked slots) - more aggressive cleanup
+  // Remove previous-day appointments before deleting their slots.
   async cleanupOldSlots() {
     try {
-      // Use IST timezone for consistent date handling
-      const todayIST = getISTDateReliable()
-      todayIST.setHours(0, 0, 0, 0) // Start of today in IST
+      const todayIST = getISTCalendarDay()
+      await this.cleanupPastAppointments(todayIST)
 
       const result = await Slot.deleteMany({
-        date: { $lt: todayIST },
-        isBooked: false // Only delete unbooked slots
+        date: { $lt: todayIST }
       })
 
       if (result.deletedCount > 0) {
-        console.log(`🗑️  Cleaned up ${result.deletedCount} past unbooked slots`)
+        console.log(`🗑️  Cleaned up ${result.deletedCount} past slots`)
       }
     } catch (error) {
       console.error('❌ Error cleaning up old slots:', error)
+      throw error
     }
   }
 
   // Clean up past appointments (appointments from previous days)
-  async cleanupPastAppointments() {
+  async cleanupPastAppointments(todayIST = getISTCalendarDay()) {
     try {
-      // Use IST timezone for consistent date handling
-      const todayIST = getISTDateReliable()
-      todayIST.setHours(0, 0, 0, 0) // Start of today in IST
 
       // Find appointments from past dates
       const pastAppointments = await Appointment.find({
@@ -296,6 +288,7 @@ class SlotService {
 
         } catch (appointmentError) {
           console.error(`❌ Error cleaning up appointment ${appointment._id}:`, appointmentError.message)
+          throw appointmentError
         }
       }
 
@@ -304,26 +297,24 @@ class SlotService {
 
     } catch (error) {
       console.error('❌ Error cleaning up past appointments:', error)
+      throw error
     }
   }
 
-  // Generate slots for the next 15 days (called daily)
+  // Refresh the rolling calendar-day window daily.
   async generateDailySlots() {
     try {
-      console.log('🕐 Daily slot refresh started - maintaining 15-day rolling window...')
+      console.log(`🕐 Daily slot refresh started - maintaining ${SLOT_WINDOW_DAYS}-day rolling window...`)
 
-      // Ensure we always have slots for the next 15 days
-      await this.ensureSlotsExist(15)
+      await this.ensureSlotsExist()
 
       // Clean up old slots to maintain the rolling window
       await this.cleanupOldSlots()
 
-      // Clean up past appointments
-      await this.cleanupPastAppointments()
-
-      console.log('✅ Daily 15-day slot refresh completed')
+      console.log(`✅ Daily ${SLOT_WINDOW_DAYS}-day slot refresh completed`)
     } catch (error) {
       console.error('❌ Daily slot refresh failed:', error)
+      throw error
     }
   }
 
@@ -331,7 +322,7 @@ class SlotService {
   // See vercel.json and /api/cron/* endpoints for the new implementation
   startAutomation() {
     console.log('ℹ️  Slot automation is now handled by Vercel Cron Jobs')
-    console.log('📅 Daily 15-day refresh: 12:01 AM IST via /api/cron/daily-slot-refresh')
+    console.log(`📅 Daily ${SLOT_WINDOW_DAYS}-day refresh: 12:01 AM IST via /api/cron/daily-slot-refresh`)
     console.log('🗑️  Daily slot cleanup: 1:00 AM IST via /api/cron/slot-cleanup')
     console.log('🗑️  Daily appointment cleanup: 2:00 AM IST via /api/cron/appointment-cleanup')
     console.log('✅ Cron jobs configured in vercel.json')
@@ -388,24 +379,22 @@ class SlotService {
 
   // Initialize slots on server startup
   async initialize() {
-    console.log('🚀 Initializing 15-day rolling slot service...')
+    console.log(`🚀 Initializing ${SLOT_WINDOW_DAYS}-day rolling slot service...`)
 
     try {
       // First, clean up old data on server startup
       console.log('🧹 Cleaning up old data on server startup...')
-      await this.cleanupPastAppointments()
       await this.cleanupOldSlots()
 
-      // Then ensure slots exist for the next 15 days
-      await this.ensureSlotsExist(15)
+      await this.ensureSlotsExist()
 
-      // Start automation for 15-day rolling window
       this.startAutomation()
 
-      console.log('✅ 15-day rolling slot service initialized successfully')
-      console.log('📅 Maintaining slots for next 15 days with daily refresh')
+      console.log(`✅ ${SLOT_WINDOW_DAYS}-day rolling slot service initialized successfully`)
+      console.log(`📅 Maintaining slots for next ${SLOT_WINDOW_DAYS} days with daily refresh`)
     } catch (error) {
       console.error('❌ Failed to initialize slot service:', error)
+      throw error
     }
   }
 }

@@ -12,7 +12,7 @@ import {
   validateDateRange
 } from '../middleware/validation.js'
 import slotService from '../services/slotService.js'
-import { getISTDateReliable } from '../utils/dateUtils.js'
+import { getISTDateReliable, getISTCalendarDay, SLOT_WINDOW_DAYS } from '../utils/dateUtils.js'
 
 const router = express.Router()
 
@@ -35,11 +35,12 @@ router.get('/available', async (req, res) => {
 
     // Parse the date and validate it's not in the past using IST
     const targetDate = new Date(date)
-    const todayIST = getISTDateReliable()
+    const todayIST = getISTCalendarDay()
 
-    // Set both dates to start of day for accurate comparison
-    targetDate.setHours(0, 0, 0, 0)
-    todayIST.setHours(0, 0, 0, 0)
+    if (Number.isNaN(targetDate.getTime())) {
+      return res.status(400).json({ success: false, message: 'Please provide a valid date' })
+    }
+    targetDate.setUTCHours(0, 0, 0, 0)
 
     // Prevent fetching slots for past dates
     if (targetDate < todayIST) {
@@ -49,14 +50,14 @@ router.get('/available', async (req, res) => {
       })
     }
 
-    // Restrict booking to next 15 days only
+    // Include today and the following 29 IST calendar days.
     const maxBookingDate = new Date(todayIST)
-    maxBookingDate.setDate(maxBookingDate.getDate() + 15)
+    maxBookingDate.setUTCDate(maxBookingDate.getUTCDate() + SLOT_WINDOW_DAYS)
 
-    if (targetDate > maxBookingDate) {
+    if (targetDate >= maxBookingDate) {
       return res.status(400).json({
         success: false,
-        message: 'Appointments can only be booked for the next 15 days. Please select a date within this range.'
+        message: 'Appointments can only be booked within 30 days, including today. Please select a date within this range.'
       })
     }
 
@@ -77,7 +78,7 @@ router.get('/available', async (req, res) => {
     }
 
     // Create a proper UTC date for database query
-    const utcDate = new Date(Date.UTC(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()))
+    const utcDate = targetDate
 
     // Get all slots for the date (both available and booked)
     const allSlots = await Slot.find({
@@ -92,19 +93,13 @@ router.get('/available', async (req, res) => {
     // Filter out past slots if the selected date is today
     // Use IST timezone for proper time comparison
     const nowIST = getISTDateReliable()
-    const todayISTForComparison = new Date(nowIST)
-    todayISTForComparison.setHours(0, 0, 0, 0)
-
-    const selectedDate = new Date(utcDate)
-    selectedDate.setHours(0, 0, 0, 0)
+    const todayISTForComparison = todayIST
+    const selectedDate = utcDate
 
     let filteredSlots = allSlots
 
     // Check if the selected date is today in IST
-    const targetDateIST = new Date(targetDate)
-    targetDateIST.setHours(0, 0, 0, 0)
-
-    if (targetDateIST.getTime() === todayISTForComparison.getTime()) {
+    if (targetDate.getTime() === todayIST.getTime()) {
       const currentTimeIST = nowIST.getHours() * 60 + nowIST.getMinutes() // Current IST time in minutes
 
       // Debug logging for timezone issues

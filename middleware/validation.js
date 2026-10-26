@@ -1,6 +1,6 @@
 import { body, param, query, validationResult } from 'express-validator'
 import mongoose from 'mongoose'
-import { getISTDate, parseISTDate, parseFlexibleDate, calculateAge } from '../utils/dateUtils.js'
+import { getISTDate, getISTCalendarDay, SLOT_WINDOW_DAYS, parseISTDate, parseFlexibleDate, calculateAge } from '../utils/dateUtils.js'
 import { validateINRAmount, DEFAULT_CURRENCY } from '../utils/currencyUtils.js'
 
 // Handle validation errors
@@ -261,24 +261,22 @@ export const validateAppointmentCreation = [
         throw new Error('Please provide appointment date in dd/mm/yyyy format or valid ISO date')
       }
 
-      const todayIST = getISTDate()
+      const todayIST = getISTCalendarDay()
 
-      // Set both dates to start of day for accurate comparison in IST
-      appointmentDate.setHours(0, 0, 0, 0)
-      todayIST.setHours(0, 0, 0, 0)
+      const appointmentDay = value.includes('/')
+        ? new Date(Date.UTC(appointmentDate.getFullYear(), appointmentDate.getMonth(), appointmentDate.getDate()))
+        : new Date(Date.UTC(appointmentDate.getUTCFullYear(), appointmentDate.getUTCMonth(), appointmentDate.getUTCDate()))
 
       // Prevent booking appointments for past dates (IST comparison)
-      if (appointmentDate < todayIST) {
+      if (appointmentDay < todayIST) {
         throw new Error('Appointment date cannot be in the past. Please select today or a future date.')
       }
 
-      // Restrict appointments to next 15 days only (IST)
-      const maxBookingDateIST = getISTDate()
-      maxBookingDateIST.setDate(maxBookingDateIST.getDate() + 15)
-      maxBookingDateIST.setHours(0, 0, 0, 0)
+      const maxBookingDateIST = new Date(todayIST)
+      maxBookingDateIST.setUTCDate(maxBookingDateIST.getUTCDate() + SLOT_WINDOW_DAYS)
 
-      if (appointmentDate > maxBookingDateIST) {
-        throw new Error('Appointments can only be booked for the next 15 days. Please select a date within this range.')
+      if (appointmentDay >= maxBookingDateIST) {
+        throw new Error('Appointments can only be booked within 30 days, including today. Please select a date within this range.')
       }
 
       return true
