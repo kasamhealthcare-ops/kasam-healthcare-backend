@@ -185,6 +185,25 @@ app.get('/health', (req, res) => {
   })
 })
 
+if (process.env.VERCEL) {
+  let connectionPromise
+  app.use('/api', async (req, res, next) => {
+    try {
+      if (!connectionPromise) {
+        connectionPromise = mongoose.connect(process.env.MONGODB_URI).catch(error => {
+          connectionPromise = undefined
+          throw error
+        })
+      }
+      await connectionPromise
+      next()
+    } catch (error) {
+      console.error('❌ Database connection failed:', error.message)
+      res.status(503).json({ success: false, message: 'Database connection unavailable' })
+    }
+  })
+}
+
 // API routes
 app.use('/api/auth', authRoutes)
 app.use('/api/auth', googleAuthRoutes)
@@ -398,19 +417,7 @@ process.on('uncaughtException', (err) => {
 })
 
 // Initialize for serverless or start server
-if (process.env.VERCEL) {
-  // In Vercel serverless environment, initialize database and slot service
-  const initializeVercel = async () => {
-    try {
-      await connectDB()
-      // Initialize slot service for cron jobs to work properly
-      await slotService.initialize()
-    } catch (error) {
-      console.error('❌ Failed to initialize Vercel environment:', error)
-    }
-  }
-  initializeVercel()
-} else {
+if (!process.env.VERCEL) {
   // In regular environment, start the server
   startServer()
 }
